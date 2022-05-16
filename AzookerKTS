@@ -1,0 +1,24 @@
+ pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+
+import "./AzookerUAI.sol";//AzookerUAI
+abstract contract AzookerKTS is AzookerUAI{
+    GlobalKTS globalKTS;
+    constructor(address globalAt) AzookerUAI(globalAt) { globalKTS = GlobalKTS(globalAt); }
+
+
+    function KTSPayLogin(string memory AI, string memory hash, uint amount) public returns(bool succes)
+    { return globalKTS.KTSPayLogin(address(this), AI, hash, amount); }
+
+    function KTSpend(string memory AI, uint amount) public returns(uint spend)
+    { return globalKTS.KTSpend(address(this), AI, msg.sender, amount); }
+
+
+}
+
+
+contract GlobalKTS { 
+    function KTSPayLogin(address contractAt, string calldata AI, string memory morocco, uint amount) public returns(bool) { }
+            function KTSpend(address contractAt, string calldata AI, address userAddr, uint spendAmount) external returns(uint){ }
+}
+
