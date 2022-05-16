@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+//https://www.youtube.com/watch?v=iYUjuD17jG4
+
+import "./AzookerXID.sol";
+contract KeyKards is AzookerXID {
+constructor(address globalAt, address Storage) AzookerXID(globalAt) { myGlobalXID.SetContract(address(this), Storage); }  
+
+    mapping(uint => EventInfo) Event;
+    struct EventInfo{
+        uint KTSPrice;
+        uint Slots;
+        uint[] JoinKeys;
+        string KeyDesign; }
+
+    modifier canSetUp(string memory AI, uint price){ KTSpend(AI, price); _;}
+        function EventSetUp(string memory AI, uint price, uint slots, string memory keyDesign) public canSetUp(AI, price) returns(uint eID_){
+            eID_ = XSetID(AI);
+
+            Event[eID_].KTSPrice = price;
+            Event[eID_].Slots = slots;
+            Event[eID_].KeyDesign = keyDesign; 
+
+            return eID_; }
+
+
+    mapping(string => uint[]) AI_Keys;
+    mapping (uint => KeyInfo) KeyKard;
+    struct KeyInfo {
+        string Identifier;//Ingame username
+        uint EventID;
+        uint KTS;
+        bool Winner; }
+
+  function KeyView(uint KeyID) public view returns(string memory AI, string memory Identifier, uint EventID, uint KTS) {
+     return(myGlobalXID.XOwnerXID(address(this), KeyID),
+      KeyKard[KeyID].Identifier,
+      KeyKard[KeyID].EventID,
+      KeyKard[KTS].KTS); }
+
+    function KeyMint(string memory AI, string memory identifier, uint KTS) public {
+        KTSpend(AI, KTS);
+
+        uint XID = XSetID(AI);
+        AI_Keys[AI][AI_Keys[AI].length] = XID;
+       
+        KeyKard[XID].Identifier = identifier;
+        KeyKard[XID].EventID = 0;
+        KeyKard[XID].KTS = KTS; }
+
+
+    modifier keyOwner(string memory AI, uint KeyID){ 
+    require((keccak256(abi.encodePacked((myGlobalXID.XOwnerXID(address(this), KeyID)))) == keccak256(abi.encodePacked((AI)))),
+    "Security Warning: This account don't match with the username"); _;}
+
+
+modifier canJoin(uint KeyID, uint eID){
+        require(KeyKard[KeyID].EventID == 0, "Warning: This KeyKard is in another Event.");
+        require(KeyKard[KeyID].KTS >= Event[eID].KTSPrice, "Warning: This KeyKard is in another Event.");
+        require(Event[eID].Slots >= 1, "Warning: This event slots are full.");  _; }
+    function KeyJoin(string memory AI, uint KeyID, uint eID) public keyOwner(AI, KeyID) canJoin(KeyID, eID) {
+        Event[eID].JoinKeys[Event[eID].JoinKeys.length] = KeyID;
+        KeyKard[KeyID].EventID = eID;
+        Event[eID].Slots -= 1; }
+
+
+    mapping(uint => uint[]) Event_WinnerKeys;
+    
+    function KeySetWinners(uint KeyWinner, uint eID, uint[] memory KeyLoosers) public isManager() {//App
+    for(uint x = 0; x < KeyLoosers.length; ++x){
+        KeyKard[KeyWinner].KTS += KeyKard[KeyLoosers[x]].KTS;
+        KeyKard[KeyLoosers[x]].KTS = 0; }
+
+        KeyKard[KeyWinner].Winner = true;
+        Event_WinnerKeys[eID][Event_WinnerKeys[eID].length] = KeyWinner; }
+
+       function KeyWinners(uint eID) public view returns(uint[] memory) 
+        { return(Event_WinnerKeys[eID]); }
+
+
+        function KTSBack(uint KeyID, string memory beOriginal) public {
+                     string memory AI = myGlobalXID.XOwnerXID(address(this), KeyID);
+                     require(_AILogin(AI), "Security Warning: Login error.");
+                     require(KeyKard[KeyID].Winner, "This KeyKard is not winner, you can't exit.");
+                     KTSPayLogin(AI, beOriginal, KeyKard[KeyID].KTS);
+                     KeyKard[KeyID].KTS = 0; }
+                   
+}
